@@ -39,10 +39,14 @@ class LoadStoreTrace : public IFrontEnd, public Implementation {
 
 
     void tick() override {
+      if (m_curr_trace_idx >= m_trace_length){
+        return;
+      }
       const Trace& t = m_trace[m_curr_trace_idx];
-      bool request_sent = m_memory_system->send({t.addr, t.is_write ? Request::Type::Write : Request::Type::Read});
+      bool request_sent = m_memory_system->send({t.addr, t.is_write ? Request::Type::AllWrite : Request::Type::AllRead});
       if (request_sent) {
-        m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
+        //m_curr_trace_idx = (m_curr_trace_idx + 1) % m_trace_length;
+        m_curr_trace_idx++;
         m_trace_count++;
       }
     };

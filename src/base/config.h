@@ -5,11 +5,10 @@
 #include <iostream>
 #include <regex>
 
-#include <spdlog/spdlog.h>
+// #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 #include "base/base.h"
-
 
 namespace Ramulator {
 namespace Config {
@@ -20,16 +19,17 @@ namespace Config {
  * @param    path           Path to the yaml file.
  * @return   YAML::Node     A YAML node containing all configurations.
  */
-YAML::Node parse_config_file(const std::string& path, const std::vector<std::string>& params);
-
+YAML::Node parse_config_file(const std::string& path,
+                             const std::vector<std::string>& params);
 
 namespace Details {
 
 /**
- * @brief    Load the YAML file and set the current path to the parent path of the file.
- * 
+ * @brief    Load the YAML file and set the current path to the parent path of
+ * the file.
+ *
  * @param    path_str       Path to the yaml file.
- * @return   YAML::Node 
+ * @return   YAML::Node
  */
 YAML::Node load_config_file(const std::string& path_str);
 
@@ -42,17 +42,18 @@ YAML::Node load_config_file(const std::string& path_str);
 void resolve_included_configs(YAML::Node node);
 
 /**
- * @brief    Override the config (add if non-existent) in the YAML file with the command line options.
+ * @brief    Override the config (add if non-existent) in the YAML file with the
+ * command line options.
  *
  * @param    config         Parsed YAML configurations.
  * @param    params         Command line option names and values.
  */
-void override_configs(YAML::Node config, const std::vector<std::string>& params);
+void override_configs(YAML::Node config,
+                      const std::vector<std::string>& params);
 
-}    // namespace Details
-}    // namespace Config
+}  // namespace Details
+}  // namespace Config
 
+}  // namespace Ramulator
 
-}        // namespace Ramulator
-
-#endif   // RAMULATOR_BASE_CONFIG_H
+#endif  // RAMULATOR_BASE_CONFIG_H

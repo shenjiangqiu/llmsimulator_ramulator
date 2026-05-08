@@ -12,12 +12,16 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
     ReqBuffer m_priority_buffer;          // Buffer for high-priority requests (e.g., maintenance like refresh).
     ReqBuffer m_read_buffer;              // Read request buffer
     ReqBuffer m_write_buffer;             // Write request buffer
+    ReqBuffer m_PIM_buffer;               // PIM request buffer
 
     int m_row_addr_idx = -1;
 
     float m_wr_low_watermark;
     float m_wr_high_watermark;
     bool  m_is_write_mode = false;
+    
+    //pim
+    bool m_is_PIM_mode = false;
 
     std::vector<IControllerPlugin*> m_plugins;
 
@@ -48,6 +52,19 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
       m_priority_buffer.max_size = 512*3 + 32;
     };
 
+    bool is_finished(){
+      std::cout<< pending.size() << " " << m_active_buffer.size() << " " << m_priority_buffer.size() << " " << m_read_buffer.size() << " " << m_write_buffer.size() << std::endl;
+      if (pending.empty() &&
+          m_active_buffer.empty() &&
+          m_priority_buffer.empty() &&
+          m_read_buffer.empty() &&
+          m_write_buffer.empty())
+        return true;
+
+      else
+        return false;
+    }
+
     bool send(Request& req) override {
       req.final_command = m_dram->m_request_translations(req.type_id);
 
@@ -71,6 +88,8 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
         is_success = m_read_buffer.enqueue(req);
       } else if (req.type_id == Request::Type::Write) {
         is_success = m_write_buffer.enqueue(req);
+      } else if (req.type_id == Request::Type::AllRead) {
+        is_success = m_read_buffer.enqueue(req);
       } else {
         throw std::runtime_error("Invalid request type!");
       }
@@ -116,10 +135,10 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
 
         // If we are issuing the last command, set depart clock cycle and move the request to the pending queue
         if (req_it->command == req_it->final_command) {
-          if (req_it->type_id == Request::Type::Read) {
+          if (req_it->type_id == Request::Type::Read or req_it->type_id == Request::Type::AllRead) {
             req_it->depart = m_clk + m_dram->m_read_latency;
             pending.push_back(*req_it);
-          } else if (req_it->type_id == Request::Type::Write) {
+          } else if (req_it->type_id == Request::Type::Write or req_it->type_id == Request::Type::AllWrite) {
             // TODO: Add code to update statistics
           }
           buffer->remove(req_it);
@@ -180,7 +199,7 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
         }
       }
     };
-
+    
 
     /**
      * @brief    Helper function to find a request to schedule from the buffers.
@@ -188,61 +207,61 @@ class GenericDRAMController final : public IDRAMController, public Implementatio
      */
     bool schedule_request(ReqBuffer::iterator& req_it, ReqBuffer*& req_buffer) {
       bool request_found = false;
-      // 2.1    First, check the act buffer to serve requests that are already activating (avoid useless ACTs)
-      if (req_it= m_scheduler->get_best_request(m_active_buffer); req_it != m_active_buffer.end()) {
-        if (m_dram->check_ready(req_it->command, req_it->addr_vec)) {
+
+      if (m_is_PIM_mode) {
+        if(req_it = m_scheduler->get_best_request(m_PIM_buffer); req_it != m_active_buffer.end()) {
           request_found = true;
-          req_buffer = &m_active_buffer;
+          req_buffer = &m_PIM_buffer;
         }
       }
 
-      // 2.2    If no requests can be scheduled from the act buffer, check the rest of the buffers
-      if (!request_found) {
-        // 2.2.1    We first check the priority buffer to prioritize e.g., maintenance requests
-        if (m_priority_buffer.size() != 0) {
-          req_buffer = &m_priority_buffer;
-          req_it = m_priority_buffer.begin();
-          req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
-          
-          request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
-          if ((!request_found) & (m_priority_buffer.size() != 0)) {
-            return false;
+      else {
+        // 2.1    First, check the act buffer to serve requests that are already activating (avoid useless ACTs)
+        if (req_it= m_scheduler->get_best_request(m_active_buffer); req_it != m_active_buffer.end()) {
+          if (m_dram->check_ready(req_it->command, req_it->addr_vec)) {
+            request_found = true;
+            req_buffer = &m_active_buffer;
           }
         }
 
-        // 2.2.1    If no request to be scheduled in the priority buffer, check the read and write buffers.
+        // 2.2    If no requests can be scheduled from the act buffer, check the rest of the buffers
         if (!request_found) {
-          // Query the write policy to decide which buffer to serve
-          set_write_mode();
-          auto& buffer = m_is_write_mode ? m_write_buffer : m_read_buffer;
-          if (req_it = m_scheduler->get_best_request(buffer); req_it != buffer.end()) {
+          // 2.2.1    We first check the priority buffer to prioritize e.g., maintenance requests
+          if (m_priority_buffer.size() != 0) {
+            req_buffer = &m_priority_buffer;
+            req_it = m_priority_buffer.begin();
+            req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_vec);
+            
             request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
-            req_buffer = &buffer;
+            if (!request_found & m_priority_buffer.size() != 0) {
+              return false;
+            }
+          }
+
+          // 2.2.1    If no request to be scheduled in the priority buffer, check the read and write buffers.
+          if (!request_found) {
+            // Query the write policy to decide which buffer to serve
+            set_write_mode();
+            auto& buffer = m_is_write_mode ? m_write_buffer : m_read_buffer;
+            if (req_it = m_scheduler->get_best_request(buffer); req_it != buffer.end()) {
+              request_found = m_dram->check_ready(req_it->command, req_it->addr_vec);
+              req_buffer = &buffer;
+            }
           }
         }
-      }
 
-      // 2.3 If we find a request to schedule, we need to check if it will close an opened row in the active buffer.
-      if (request_found) {
-        if (m_dram->m_command_meta(req_it->command).is_closing) {
-          bool has_addr_wildcard = false;
-          int row_group_end = m_row_addr_idx;
-          int last_valid_level = 0;
-          for (int i : req_it->addr_vec) {
-            if (i == -1) {
-              has_addr_wildcard = true;
-              row_group_end = last_valid_level;
-              break;
-            }
-            last_valid_level++;
-          }
+        // 2.3 If we find a request to schedule, we need to check if it will close an opened row in the active buffer.
+        if (request_found) {
+          if (m_dram->m_command_meta(req_it->command).is_closing) {
+            std::vector<Addr_t> rowgroup((req_it->addr_vec).begin(), (req_it->addr_vec).begin() + m_row_addr_idx);
 
-          std::vector<Addr_t> rowgroup((req_it->addr_vec).begin(), (req_it->addr_vec).begin() + row_group_end);
-          for (auto _it = m_active_buffer.begin(); _it != m_active_buffer.end(); _it++) {
-            std::vector<Addr_t> _it_rowgroup(_it->addr_vec.begin(), _it->addr_vec.begin() + row_group_end);
-            if (rowgroup == _it_rowgroup) {
-              // Invalidate this scheduling outcome if we are to interrupt a request in the active buffer
-              request_found = false;
+            // Search the active buffer with the row address (inkl. banks, etc.)
+            for (auto _it = m_active_buffer.begin(); _it != m_active_buffer.end(); _it++) {
+              std::vector<Addr_t> _it_rowgroup(_it->addr_vec.begin(), _it->addr_vec.begin() + m_row_addr_idx);
+              if (rowgroup == _it_rowgroup) {
+                // Invalidate this scheduling outcome if we are to interrupt a request in the active buffer
+                request_found = false;
+              }
             }
           }
         }

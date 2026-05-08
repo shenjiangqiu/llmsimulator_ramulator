@@ -22,6 +22,7 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
     uint m_clock_ratio = 1;
 
   public:
+    Clk_t m_clk = 0;
     virtual void connect_frontend(IFrontEnd* frontend) { 
       m_frontend = frontend; 
       m_impl->setup(frontend, this);
@@ -71,6 +72,8 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
     // virtual const SpecDef& get_supported_requests() = 0;
 
     virtual float get_tCK() { return -1.0f; };
+
+    virtual bool is_finished() = 0;
 };
 
 }        // namespace Ramulator

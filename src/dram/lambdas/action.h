@@ -97,6 +97,19 @@ namespace Rank {
 
 namespace Channel {
   // TODO: Make these nicer...
+
+  template<class T>
+  void ACT(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
+    node->m_state = T::m_states["Opened"];
+    node->m_row_state[target_id] = T::m_states["Opened"];
+  };
+
+  template<class T>
+  void PIMPRE(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
+    node->m_state = T::m_states["Closed"];
+    node->m_row_state.clear();
+  }
+  
   template <class T>
   void PREab(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
     if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 2) {
@@ -115,11 +128,21 @@ namespace Channel {
           }
         }
       }
+    } else if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 4) {
+      for (auto pc : node->m_child_nodes) {
+        for (auto rank : pc->m_child_nodes) {
+          for (auto bg : rank->m_child_nodes) {
+            for (auto bank : bg->m_child_nodes) {
+              bank->m_state = T::m_states["Closed"];
+              bank->m_row_state.clear();
+            }
+          }
+        }
+      }
     } else {
-      static_assert(
-        false_v<T>, 
-        "[Action::Rank] Unsupported organization. Please write your own PREab function."
-      );
+      static_assert(false_v<T>,
+                    "[Action::Rank] Unsupported organization. Please write "
+                    "your own PREab function.");
     }
   };
 }      // namespace Channel

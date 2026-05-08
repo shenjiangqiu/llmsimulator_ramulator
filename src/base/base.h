@@ -23,10 +23,6 @@
 #include "base/stats.h"
 
 
-#ifndef uint
-#define uint unsigned int
-#endif
-
 namespace Ramulator {
 
 DECLARE_DEBUG_FLAG(DINIT);

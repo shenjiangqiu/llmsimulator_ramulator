@@ -102,12 +102,16 @@ int main(int argc, char* argv[]) {
       frontend->tick();
     }
 
-    if (frontend->is_finished()) {
-      break;
-    }
+    // if (frontend->is_finished()) {
+    //   break;
+    // }
 
     if ((i % tick_mult) % frontend_tick == 0) {
       memory_system->tick();
+
+      if (memory_system->is_finished()) {
+        break;
+      }
     }
   }
 

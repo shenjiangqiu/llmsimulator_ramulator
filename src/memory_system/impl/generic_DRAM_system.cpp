@@ -84,6 +84,14 @@ class GenericDRAMSystem final : public IMemorySystem, public Implementation {
       return m_dram->m_timing_vals("tCK_ps") / 1000.0f;
     }
 
+    bool is_finished() override{
+      for (auto controller : m_controllers) {
+        if (!controller->is_finished())
+          return false;
+      }
+      return true;
+    }
+
     // const SpecDef& get_supported_requests() override {
     //   return m_dram->m_requests;
     // };

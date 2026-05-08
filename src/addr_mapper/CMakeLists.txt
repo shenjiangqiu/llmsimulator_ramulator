@@ -10,7 +10,7 @@ target_sources(
 )
 
 target_link_libraries(
-  ramulator
+  dram
   PRIVATE
   ramulator-addrmapper
 )

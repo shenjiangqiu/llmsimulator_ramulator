@@ -26,6 +26,24 @@ int RequireRowOpen(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
 };
 
 template <class T>
+int RequirePIMRowOpen(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
+  switch (node->m_state) {
+    case T::m_states["Closed"]: return T::m_commands["ALL-ACT"];
+    case T::m_states["Opened"]: {
+      if (node->m_row_state.find(target_id) != node->m_row_state.end()) {
+        return cmd;
+      } else {
+        return T::m_commands["ALL-PRE"];
+      }
+    }    
+    default: {
+      spdlog::error("[Preq::Bank] Invalid bank state for an RD/WR command!");
+      std::exit(-1);      
+    } 
+  }
+};
+
+template <class T>
 int RequireBankClosed(typename T::Node* node, int cmd, int target_id, Clk_t clk) {
   switch (node->m_state) {
     case T::m_states["Closed"]: return cmd;
@@ -102,6 +120,20 @@ namespace Channel {
               continue;
             } else {
               return T::m_commands["PREA"];
+            }
+          }
+        }
+      }
+    } else if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 4) {
+      for (auto pc : node->m_child_nodes) {
+        for (auto rank : pc->m_child_nodes) {
+          for (auto bg : rank->m_child_nodes) {
+            for (auto bank : bg->m_child_nodes) {
+              if (bank->m_state == T::m_states["Closed"]) {
+                continue;
+              } else {
+                return T::m_commands["PREA"];
+              }
             }
           }
         }

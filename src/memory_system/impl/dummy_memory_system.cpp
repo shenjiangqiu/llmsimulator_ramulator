@@ -18,6 +18,10 @@ class DummyMemorySystem final : public IMemorySystem, public Implementation {
     };
 
     void tick() override {};
+
+    bool is_finished() override {
+      return true;
+    };
 };
   
 }   // namespace Ramulator

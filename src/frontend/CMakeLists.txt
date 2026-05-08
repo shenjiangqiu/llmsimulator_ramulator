@@ -1,5 +1,6 @@
 add_library(ramulator-frontend OBJECT)
 
+# include_directories(${CMAKE_SOURCE_DIR}/include)
 target_sources(
   ramulator-frontend PRIVATE
   frontend.h
@@ -12,15 +13,14 @@ target_sources(
   impl/processor/simpleO3/llc.h       impl/processor/simpleO3/llc.cpp
   impl/processor/simpleO3/trace.h     impl/processor/simpleO3/trace.cpp
 
-  impl/processor/bhO3/bhO3.h
-  impl/processor/bhO3/bhcore.h    impl/processor/bhO3/bhcore.cpp
-  impl/processor/bhO3/bhllc.h     impl/processor/bhO3/bhllc.cpp
+  impl/PIM_controller.cpp
 
   impl/external_wrapper/gem5_frontend.cpp
 )
 
+
 target_link_libraries(
-  ramulator
+  dram
   PRIVATE
   ramulator-frontend
-)
+  )  

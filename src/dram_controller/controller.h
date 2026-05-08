@@ -46,6 +46,10 @@ class IDRAMController : public Clocked<IDRAMController> {
      * 
      */
     virtual void tick() = 0;
+
+    virtual bool is_finished() = 0;
+
+    virtual void set_PIM_mode(bool is_pim_mode) {}
    
 };
 

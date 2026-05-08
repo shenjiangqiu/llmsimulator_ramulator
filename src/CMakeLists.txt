@@ -7,8 +7,9 @@ add_subdirectory(addr_mapper)
 add_subdirectory(dram)
 add_subdirectory(dram_controller)
 
-target_sources(
-  ramulator-exe
-  PRIVATE 
-  main.cpp
-)
+#include_directories(${CMAKE_CURRENT_SOURCE_DIR}./)
+# target_sources(
+#   ramulator-exe
+#   PRIVATE 
+#   main.cpp
+# )

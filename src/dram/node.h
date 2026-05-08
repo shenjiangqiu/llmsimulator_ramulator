@@ -44,6 +44,8 @@ struct DRAMNodeBase {
 
     int m_state = -1;      // The state of the node
 
+    bool is_PIM_mode = false;
+
     std::vector<Clk_t> m_cmd_ready_clk;             // The next cycle that each command can be issued again at this level
     std::vector<std::deque<Clk_t>> m_cmd_history;   // Issue-history of each command at this level
 
@@ -92,7 +94,9 @@ struct DRAMNodeBase {
       int child_id = addr_vec[m_level+1];
       if (m_spec->m_actions[m_level][command]) {
         // update the state machine at this level
-        m_spec->m_actions[m_level][command](static_cast<NodeType*>(this), command, child_id, clk); 
+
+        m_spec->m_actions[m_level][command](static_cast<NodeType*>(this),
+                                            command, child_id, clk);
       }
       if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
         // stop recursion: updated all levels
@@ -161,7 +165,15 @@ struct DRAMNodeBase {
     int get_preq_command(int command, const AddrVec_t& addr_vec, Clk_t m_clk) {
       int child_id = addr_vec[m_level + 1];
       if (m_spec->m_preqs[m_level][command]) {
-        int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType*>(this), command, child_id, m_clk);
+        //PIM
+        int preq_cmd = -1;
+        if (m_level == 0){
+          int row_level = T::m_levels["row"];
+          preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType*>(this), command, addr_vec[row_level], m_clk);
+        } else{
+          preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType*>(this), command, child_id, m_clk);
+        }
+
         if (preq_cmd != -1) {
           // stop recursion: there is a prerequisite at this level
           return preq_cmd; 

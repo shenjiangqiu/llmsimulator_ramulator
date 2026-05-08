@@ -82,12 +82,16 @@ class RoBaRaCoCh final : public LinearMapperBase, public Implementation {
     }
 
     void apply(Request& req) override {
-      req.addr_vec.resize(m_num_levels, -1);
-      Addr_t addr = req.addr >> m_tx_offset;
-      req.addr_vec[0] = slice_lower_bits(addr, m_addr_bits[0]);
-      req.addr_vec[m_addr_bits.size() - 1] = slice_lower_bits(addr, m_addr_bits[m_addr_bits.size() - 1]);
-      for (int i = 1; i <= m_row_bits_idx; i++) {
-        req.addr_vec[i] = slice_lower_bits(addr, m_addr_bits[i]);
+      if (req.addr == -1) {
+      } else {
+        req.addr_vec.resize(m_num_levels, -1);
+        Addr_t addr = req.addr >> m_tx_offset;
+        req.addr_vec[0] = slice_lower_bits(addr, m_addr_bits[0]);
+        req.addr_vec[m_addr_bits.size() - 1] =
+            slice_lower_bits(addr, m_addr_bits[m_addr_bits.size() - 1]);
+        for (int i = 1; i <= m_row_bits_idx; i++) {
+          req.addr_vec[i] = slice_lower_bits(addr, m_addr_bits[i]);
+        }
       }
     }
 };
