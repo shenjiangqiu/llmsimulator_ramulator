@@ -15,20 +15,20 @@ namespace Ramulator {
 class IDRAM;
 
 template<typename T>
-concept IsDRAMSpec = requires(T t) { 
-  typename T::Node; 
+concept IsDRAMSpec = requires(T t) {
+  typename T::Node;
 };
 
 // CRTP class defnition is not complete, so we cannot have something nice like:
 // template<typename T>
-// concept IsDRAMSpec = std::is_base_of_v<IDRAM, T> && requires(T t) { 
-//   typename T::Node; 
+// concept IsDRAMSpec = std::is_base_of_v<IDRAM, T> && requires(T t) {
+//   typename T::Node;
 // };
 
 
 /**
  * @brief     CRTP-ish (?) base class of a DRAM Device Node
- * 
+ *
  */
 template<IsDRAMSpec T>
 struct DRAMNodeBase {
@@ -100,7 +100,7 @@ struct DRAMNodeBase {
       }
       if (m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
         // stop recursion: updated all levels
-        return; 
+        return;
       }
       // recursively update child nodes
       m_child_nodes[child_id]->update_states(command, addr_vec, clk);
@@ -114,15 +114,15 @@ struct DRAMNodeBase {
         for (const auto& t : m_spec->m_timing_cons[m_level][command]) {
           if (!t.sibling) {
             // not sibling timing parameter
-            continue; 
+            continue;
           }
 
           // update earliest schedulable time of every command
           Clk_t future = clk + t.val;
-          m_cmd_ready_clk[t.cmd] = std::max(m_cmd_ready_clk[t.cmd], future); 
+          m_cmd_ready_clk[t.cmd] = std::max(m_cmd_ready_clk[t.cmd], future);
         }
         // stop recursion: only target nodes should be recursed
-        return; 
+        return;
       }
 
       /************************************************
@@ -131,19 +131,19 @@ struct DRAMNodeBase {
       // Update history
       if (m_cmd_history[command].size()) {
         m_cmd_history[command].pop_back();
-        m_cmd_history[command].push_front(clk); 
+        m_cmd_history[command].push_front(clk);
       }
 
       for (const auto& t : m_spec->m_timing_cons[m_level][command]) {
         if (t.sibling) {
-          continue; 
+          continue;
         }
 
         // Get the oldest history
         Clk_t past = m_cmd_history[command][t.window-1];
         if (past < 0) {
           // not enough history
-          continue; 
+          continue;
         }
 
         // update earliest schedulable time of every command
@@ -153,7 +153,7 @@ struct DRAMNodeBase {
 
       if (!m_child_nodes.size()) {
         // stop recursion: updated all levels
-        return; 
+        return;
       }
 
       // recursively update all of my children
@@ -176,13 +176,13 @@ struct DRAMNodeBase {
 
         if (preq_cmd != -1) {
           // stop recursion: there is a prerequisite at this level
-          return preq_cmd; 
+          return preq_cmd;
         }
       }
 
       if (child_id < 0 || !m_child_nodes.size()) {
         // stop recursion: there were no prequisites at any level
-        return command; 
+        return command;
       }
 
       // recursively get_preq_command at my child
@@ -192,13 +192,13 @@ struct DRAMNodeBase {
     bool check_ready(int command, const AddrVec_t& addr_vec, Clk_t clk) {
       if (m_cmd_ready_clk[command] != -1 && clk < m_cmd_ready_clk[command]) {
         // stop recursion: the check failed at this level
-        return false; 
+        return false;
       }
 
       int child_id = addr_vec[m_level+1];
       if (child_id < 0 || m_level == m_spec->m_command_scopes[command] || !m_child_nodes.size()) {
         // stop recursion: the check passed at all levels
-        return true; 
+        return true;
       }
 
       // recursively check my child
@@ -210,25 +210,28 @@ struct DRAMNodeBase {
       int child_id = addr_vec[m_level+1];
       if (m_spec->m_rowhits[m_level][command]) {
         // stop recursion: there is a row hit at this level
-        return m_spec->m_rowhits[m_level][command](static_cast<NodeType*>(this), command, child_id, m_clk);  
+        return m_spec->m_rowhits[m_level][command](static_cast<NodeType*>(this), command, child_id, m_clk);
       }
 
       if (child_id < 0 || !m_child_nodes.size()) {
         // stop recursion: there were no row hits at any level
-        return false; 
+        return false;
       }
 
       // recursively check for row hits at my child
       return m_child_nodes[child_id]->check_rowbuffer_hit(command, addr_vec, m_clk);
-    };    
+    };
 };
 
 template<class T>
-using ActionFunc_t = std::function<void(typename T::Node* node, int cmd, int target_id, Clk_t clk)>;
+using NodeType = class T::Node;
+
 template<class T>
-using PreqFunc_t   = std::function<int (typename T::Node* node, int cmd, int target_id, Clk_t clk)>;
+using ActionFunc_t = std::function<void(NodeType<T>* node, int cmd, int target_id, Clk_t clk)>;
 template<class T>
-using RowhitFunc_t = std::function<bool(typename T::Node* node, int cmd, int target_id, Clk_t clk)>;
+using PreqFunc_t   = std::function<int (NodeType<T>* node, int cmd, int target_id, Clk_t clk)>;
+template<class T>
+using RowhitFunc_t = std::function<bool(NodeType<T>* node, int cmd, int target_id, Clk_t clk)>;
 template<class T>
 using RowopenFunc_t = RowhitFunc_t<T>;
 

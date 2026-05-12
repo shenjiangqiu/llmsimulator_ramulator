@@ -52,6 +52,7 @@ class PIMController : public IFrontEnd, public Implementation {
         return (int)Request::Type::Write;
       default:
         assert(0);
+        return 0;
     }
   }
 

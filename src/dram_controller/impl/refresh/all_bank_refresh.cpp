@@ -37,7 +37,7 @@ class AllBankRefresh : public IRefreshManager, public Implementation {
       m_next_refresh_cycle = m_nrefi;
     };
 
-    void tick() {
+    void tick() override {
       m_clk++;
 
       if (m_clk == m_next_refresh_cycle) {
