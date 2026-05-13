@@ -7,9 +7,10 @@
 
 #include "base/base.h"
 #include "dram/pim_request.h"
-#include "memory_system/memory_system.h"
 
 namespace Ramulator {
+
+class IMemorySystem;
 
 class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
   RAMULATOR_REGISTER_INTERFACE(IFrontEnd, "Frontend",

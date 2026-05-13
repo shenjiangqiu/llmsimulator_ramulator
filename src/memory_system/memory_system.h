@@ -7,10 +7,10 @@
 #include <functional>
 
 #include "base/base.h"
-#include "frontend/frontend.h"
-
 
 namespace Ramulator {
+
+class IFrontEnd;
 
 class IMemorySystem : public TopLevel<IMemorySystem> {
   RAMULATOR_REGISTER_INTERFACE(IMemorySystem, "MemorySystem", "Memory system interface (e.g., communicates between processor and memory controller).")

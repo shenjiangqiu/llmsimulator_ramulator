@@ -5,6 +5,7 @@
 #include "base/exception.h"
 #include "dram/memory_object.h"
 #include "frontend/frontend.h"
+#include "memory_system/memory_system.h"
 // #include "rf_request.h"
 
 namespace Ramulator {
